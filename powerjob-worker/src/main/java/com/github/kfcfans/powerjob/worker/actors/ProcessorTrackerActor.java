@@ -38,7 +38,8 @@ public class ProcessorTrackerActor extends AbstractActor {
         Long instanceId = req.getInstanceInfo().getInstanceId();
 
         // 创建 ProcessorTracker 一定能成功
-        ProcessorTracker processorTracker = ProcessorTrackerPool.getProcessorTracker(instanceId, req.getTaskTrackerAddress(), () -> new ProcessorTracker(req));
+        ProcessorTracker processorTracker = ProcessorTrackerPool.getProcessorTracker(instanceId,
+                req.getTaskTrackerAddress(), () -> new ProcessorTracker(req));
 
         TaskDO task = new TaskDO();
 

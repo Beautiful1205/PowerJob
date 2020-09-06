@@ -37,6 +37,7 @@ public class MainApplication implements Runnable {
 
     public static void main(String[] args) {
         CommandLine commandLine = new CommandLine(new MainApplication());
+        args = new String[]{"--app=powerjob-agent-test", "--server=localhost:7700"};
         commandLine.execute(args);
     }
 

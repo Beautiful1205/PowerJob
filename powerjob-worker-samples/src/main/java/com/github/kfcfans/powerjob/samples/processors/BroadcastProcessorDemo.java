@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * 广播处理器 示例
- * com.github.kfcfans.oms.server.processors.BroadcastProcessorDemo
+ * com.github.kfcfans.powerjob.samples.processors.BroadcastProcessorDemo
  *
  * @author tjq
  * @since 2020/4/17

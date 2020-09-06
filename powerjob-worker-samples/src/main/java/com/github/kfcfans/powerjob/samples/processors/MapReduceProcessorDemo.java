@@ -21,7 +21,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * MapReduce 处理器示例
- * com.github.kfcfans.oms.server.processors.MapReduceProcessorDemo
+ * com.github.kfcfans.powerjob.samples.processors.MapReduceProcessorDemo
  * {"batchSize": 100, "batchNum": 2}
  *
  * @author tjq

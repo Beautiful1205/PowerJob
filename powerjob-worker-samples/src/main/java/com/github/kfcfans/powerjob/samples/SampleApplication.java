@@ -1,5 +1,6 @@
 package com.github.kfcfans.powerjob.samples;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -10,10 +11,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @author tjq
  * @since 2020/4/17
  */
+@Slf4j
 @EnableScheduling
 @SpringBootApplication
 public class SampleApplication {
     public static void main(String[] args) {
         SpringApplication.run(SampleApplication.class, args);
+        log.info("powerjob-worker-samples应用启动成功!!!");
     }
 }

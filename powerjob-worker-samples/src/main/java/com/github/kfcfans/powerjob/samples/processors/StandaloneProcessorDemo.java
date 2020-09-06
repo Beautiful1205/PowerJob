@@ -11,7 +11,7 @@ import java.util.Collections;
 
 /**
  * 单机处理器 示例
- * com.github.kfcfans.oms.server.processors.StandaloneProcessorDemo
+ * com.github.kfcfans.powerjob.samples.processors.StandaloneProcessorDemo
  *
  * @author tjq
  * @since 2020/4/17
@@ -31,12 +31,12 @@ public class StandaloneProcessorDemo implements BasicProcessor {
         // 测试异常日志
         try {
             Collections.emptyList().add("277");
-        }catch (Exception e) {
+        } catch (Exception e) {
             omsLogger.error("oh~it seems that we have an exception~", e);
         }
 
         System.out.println("================ StandaloneProcessorDemo#process ================");
-        System.out.println(context.getJobParams());
+        System.out.println("=== " + context.getJobParams());
         // 根据控制台参数判断是否成功
         boolean success = !"failed".equals(context.getJobParams());
         omsLogger.info("StandaloneProcessorDemo finished process,success: .", success);

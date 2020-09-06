@@ -35,6 +35,7 @@ public class OhMyApplication {
         // 再启动SpringBoot
         try {
             SpringApplication.run(OhMyApplication.class, args);
+            log.info("powerjob-server应用启动成功!!!");
         }catch (Throwable t) {
             log.error(TIPS);
             throw t;
