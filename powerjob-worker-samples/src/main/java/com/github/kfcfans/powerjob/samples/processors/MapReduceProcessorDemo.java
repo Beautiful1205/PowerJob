@@ -76,9 +76,9 @@ public class MapReduceProcessorDemo extends MapReduceProcessor {
 
     @Override
     public ProcessResult reduce(TaskContext context, List<TaskResult> taskResults) {
-        log.info("================ MapReduceProcessorDemo#reduce ================");
-        log.info("TaskContext: {}", JSONObject.toJSONString(context));
-        log.info("List<TaskResult>: {}", JSONObject.toJSONString(taskResults));
+        System.out.println("================ MapReduceProcessorDemo#reduce ================");
+        System.out.println("TaskContext: " + JSONObject.toJSONString(context));
+        System.out.println("List<TaskResult>: " + JSONObject.toJSONString(taskResults));
         context.getOmsLogger().info("MapReduce job finished, result is {}.", taskResults);
 
         boolean success = ThreadLocalRandom.current().nextBoolean();
