@@ -18,7 +18,7 @@ public class InstanceTimeWheelService {
 
     private static final Map<Long, TimerFuture> CARGO = Maps.newConcurrentMap();
 
-    // 精确时间轮，每 1S 走一格
+    // 精确时间轮，每 1ms 走一格
     private static final HashedWheelTimer TIMER = new HashedWheelTimer(1, 4096, Runtime.getRuntime().availableProcessors() * 4);
     // 支持取消的时间间隔，低于该阈值则不会放进 CARGO
     private static final long MIN_INTERVAL_MS = 1000;

@@ -55,7 +55,10 @@ public class OhMyServer {
         actorSystemAddress = localIP + ":" + port;
         log.info("[OhMyWorker] akka-remote server address: {}", actorSystemAddress);
 
+        //在构造 Actor 系统时，可以传入Config对象，也可以不传入，其中第二种情况等同于传递ConfigFactory.load()（使用正确的类加载器）。
+        //即如果只有ConfigFactory.load()，则会解析类路径根目录下的所有application.conf、application.json和application.properties
         Config akkaBasicConfig = ConfigFactory.load(RemoteConstant.SERVER_AKKA_CONFIG_NAME);
+        //通过Config类的withFallback方法来使用自己的自定义配置去扩展默认配置
         Config akkaFinalConfig = ConfigFactory.parseMap(overrideConfig).withFallback(akkaBasicConfig);
         actorSystem = ActorSystem.create(RemoteConstant.SERVER_ACTOR_SYSTEM_NAME, akkaFinalConfig);
 
@@ -66,6 +69,7 @@ public class OhMyServer {
 
         // 处理系统中产生的异常情况
         ActorRef troubleshootingActor = actorSystem.actorOf(Props.create(ServerTroubleshootingActor.class), RemoteConstant.SERVER_TROUBLESHOOTING_ACTOR_NAME);
+        //当Actor出现故障，从而使得消息被转发给dead letter时，我们需要侦听这些死信，并对它们进行处理。则AKKA的做法就是通过EventStream来进行订阅。
         actorSystem.eventStream().subscribe(troubleshootingActor, DeadLetter.class);
 
         log.info("[OhMyServer] OhMyServer's akka system start successfully, using time {}.", stopwatch);

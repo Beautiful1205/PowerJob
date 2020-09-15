@@ -95,7 +95,8 @@ public class ProcessorRunnable implements Runnable {
                     processResult = new ProcessResult(true, "NO_PREPOST_TASK");
                 }
 
-                reportStatus(processResult.isSuccess() ? TaskStatus.WORKER_PROCESS_SUCCESS : TaskStatus.WORKER_PROCESS_FAILED, suit(processResult.getMsg()), ProcessorReportTaskStatusReq.BROADCAST);
+                reportStatus(processResult.isSuccess() ? TaskStatus.WORKER_PROCESS_SUCCESS : TaskStatus.WORKER_PROCESS_FAILED,
+                        suit(processResult.getMsg()), ProcessorReportTaskStatusReq.BROADCAST);
                 // 广播执行的第一个 task 只执行 preProcess 部分
                 return;
             }
