@@ -2,8 +2,9 @@ package com.github.kfcfans.powerjob.common.utils;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.kfcfans.powerjob.common.OmsException;
+import com.github.kfcfans.powerjob.common.PowerJobException;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 /**
@@ -28,8 +29,12 @@ public class JsonUtils {
         return null;
     }
 
-    public static String toJSONStringUnsafe(Object obj) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(obj);
+    public static String toJSONStringUnsafe(Object obj) {
+        try {
+            return objectMapper.writeValueAsString(obj);
+        }catch (Exception e) {
+            throw new PowerJobException(e);
+        }
     }
 
     public static byte[] toBytes(Object obj) {
@@ -48,12 +53,16 @@ public class JsonUtils {
         return objectMapper.readValue(b, clz);
     }
 
+    public static <T> T parseObject(byte[] b, TypeReference<T> typeReference) throws Exception {
+        return objectMapper.readValue(b, typeReference);
+    }
+
     public static <T> T parseObjectUnsafe(String json, Class<T> clz) {
         try {
             return objectMapper.readValue(json, clz);
         }catch (Exception e) {
             ExceptionUtils.rethrow(e);
         }
-        throw new OmsException("impossible");
+        throw new PowerJobException("impossible");
     }
 }

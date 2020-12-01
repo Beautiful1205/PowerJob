@@ -35,7 +35,7 @@ public class ServerController {
     @Resource
     private AppInfoRepository appInfoRepository;
 
-    @GetMapping("assert")
+    @GetMapping("/assert")
     public ResultDTO<Long> assertAppName(String appName) {
         Optional<AppInfoDO> appInfoOpt = appInfoRepository.findByAppName(appName);
         return appInfoOpt.map(appInfoDO -> ResultDTO.success(appInfoDO.getId())).
@@ -44,13 +44,7 @@ public class ServerController {
 
     @GetMapping("/acquire")
     public ResultDTO<String> acquireServer(Long appId, String currentServer) {
-
-        // 如果是本机，就不需要查数据库那么复杂的操作了，直接返回成功
-        if (OhMyServer.getActorSystemAddress().equals(currentServer)) {
-            return ResultDTO.success(currentServer);
-        }
-        String server = serverSelectService.getServer(appId);
-        return ResultDTO.success(server);
+        return ResultDTO.success(serverSelectService.getServer(appId, currentServer));
     }
 
     @GetMapping("/hello")
