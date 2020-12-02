@@ -1,21 +1,28 @@
 package com.github.kfcfans.powerjob.server.service.workflow;
 
 import com.alibaba.fastjson.JSONObject;
-import com.github.kfcfans.powerjob.common.OmsException;
+import com.github.kfcfans.powerjob.common.PowerJobException;
 import com.github.kfcfans.powerjob.common.TimeExpressionType;
 import com.github.kfcfans.powerjob.common.request.http.SaveWorkflowRequest;
 import com.github.kfcfans.powerjob.common.response.WorkflowInfoDTO;
+import com.github.kfcfans.powerjob.server.akka.OhMyServer;
+import com.github.kfcfans.powerjob.server.akka.requests.RunJobOrWorkflowReq;
 import com.github.kfcfans.powerjob.server.common.SJ;
 import com.github.kfcfans.powerjob.server.common.constans.SwitchableStatus;
 import com.github.kfcfans.powerjob.server.common.utils.CronExpression;
 import com.github.kfcfans.powerjob.server.common.utils.WorkflowDAGUtils;
+import com.github.kfcfans.powerjob.server.persistence.core.model.AppInfoDO;
 import com.github.kfcfans.powerjob.server.persistence.core.model.WorkflowInfoDO;
+import com.github.kfcfans.powerjob.server.persistence.core.repository.AppInfoRepository;
 import com.github.kfcfans.powerjob.server.persistence.core.repository.WorkflowInfoRepository;
+import com.github.kfcfans.powerjob.server.service.instance.InstanceTimeWheelService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.Date;
+import java.util.Objects;
 
 /**
  * Workflow 服务
@@ -23,9 +30,12 @@ import java.util.Date;
  * @author tjq
  * @since 2020/5/26
  */
+@Slf4j
 @Service
 public class WorkflowService {
 
+    @Resource
+    private AppInfoRepository appInfoRepository;
     @Resource
     private WorkflowInstanceManager workflowInstanceManager;
     @Resource
@@ -42,7 +52,7 @@ public class WorkflowService {
         req.valid();
 
         if (!WorkflowDAGUtils.valid(req.getPEWorkflowDAG())) {
-            throw new OmsException("illegal DAG");
+            throw new PowerJobException("illegal DAG");
         }
 
         Long wfId = req.getId();
@@ -130,22 +140,47 @@ public class WorkflowService {
      * 立即运行工作流
      * @param wfId 工作流ID
      * @param appId 所属应用ID
+     * @param initParams 启动参数
+     * @param delay 延迟时间
      * @return 该 workflow 实例的 instanceId（wfInstanceId）
      */
-    public Long runWorkflow(Long wfId, Long appId) {
+    public Long runWorkflow(Long wfId, Long appId, String initParams, long delay) {
 
         WorkflowInfoDO wfInfo = permissionCheck(wfId, appId);
-        Long wfInstanceId = workflowInstanceManager.create(wfInfo);
 
-        // 正式启动任务
-        workflowInstanceManager.start(wfInfo, wfInstanceId);
+        AppInfoDO appInfo = appInfoRepository.findById(appId).orElseThrow(() -> new IllegalArgumentException("can't find appInfo by appId: " + appId));
+
+        String targetServer = appInfo.getCurrentServer();
+        if (Objects.equals(targetServer, OhMyServer.getActorSystemAddress())) {
+            return realRunWorkflow(wfInfo, initParams, delay);
+        }
+
+        log.info("[WorkflowService-{}] redirect run request[initParams={}] to target server: {}", wfId, initParams, targetServer);
+        // 转发请求
+        RunJobOrWorkflowReq req = new RunJobOrWorkflowReq(RunJobOrWorkflowReq.WORKFLOW, wfId, delay, initParams, appId);
+        try {
+            return Long.valueOf(OhMyServer.askFriend(targetServer, req));
+        }catch (Exception e) {
+            log.error("[WorkflowService-{}] redirect run request[params={}] to target server[{}] failed!", wfId, initParams, targetServer);
+            throw new PowerJobException("redirect run request failed!", e);
+        }
+    }
+
+    private Long realRunWorkflow(WorkflowInfoDO wfInfo, String initParams, long delay) {
+        log.info("[WorkflowService-{}] try to run workflow, initParams={},delay={} ms.", wfInfo.getId(), initParams, delay);
+        Long wfInstanceId = workflowInstanceManager.create(wfInfo, initParams, System.currentTimeMillis() + delay);
+        if (delay <= 0) {
+            workflowInstanceManager.start(wfInfo, wfInstanceId, initParams);
+        }else {
+            InstanceTimeWheelService.schedule(wfInstanceId, delay, () -> workflowInstanceManager.start(wfInfo, wfInstanceId, initParams));
+        }
         return wfInstanceId;
     }
 
     private WorkflowInfoDO permissionCheck(Long wfId, Long appId) {
         WorkflowInfoDO wfInfo = workflowInfoRepository.findById(wfId).orElseThrow(() -> new IllegalArgumentException("can't find workflow by id: " + wfId));
         if (!wfInfo.getAppId().equals(appId)) {
-            throw new OmsException("Permission Denied!can't delete other appId's workflow!");
+            throw new PowerJobException("Permission Denied!can't delete other appId's workflow!");
         }
         return wfInfo;
     }

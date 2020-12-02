@@ -1,6 +1,5 @@
 package com.github.kfcfans.powerjob.server.test;
 
-import com.github.kfcfans.powerjob.server.OhMyApplication;
 import com.github.kfcfans.powerjob.server.common.utils.CronExpression;
 import com.github.kfcfans.powerjob.server.common.utils.timewheel.HashedWheelTimer;
 import com.github.kfcfans.powerjob.server.common.utils.timewheel.TimerFuture;
@@ -11,9 +10,11 @@ import org.junit.Test;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 工具类测试
@@ -22,49 +23,6 @@ import java.util.concurrent.TimeUnit;
  * @since 2020/4/3
  */
 public class UtilsTest {
-
-    @Test
-    public void testHashedWheelTimer() throws Exception {
-
-        HashedWheelTimer timer = new HashedWheelTimer(1, 1024, 32);
-        List<TimerFuture> futures = Lists.newLinkedList();
-
-        for (int i = 0; i < 1000; i++) {
-
-            String name = "Task" + i;
-            long nowMS = System.currentTimeMillis();
-            int delayMS = ThreadLocalRandom.current().nextInt(60000);
-            long targetTime = delayMS + nowMS;
-
-            TimerTask timerTask = () -> {
-                System.out.println("============= " + name + "============= ");
-                System.out.println("ThreadInfo:" + Thread.currentThread().getName());
-                System.out.println("expectTime:" + targetTime);;
-                System.out.println("currentTime:" + System.currentTimeMillis());
-                System.out.println("deviation:" + (System.currentTimeMillis() - targetTime));
-                System.out.println("============= " + name + "============= ");
-            };
-            futures.add(timer.schedule(timerTask, delayMS, TimeUnit.MILLISECONDS));
-        }
-
-        // 随机取消
-        futures.forEach(future -> {
-
-            int x = ThreadLocalRandom.current().nextInt(2);
-            if (x == 1) {
-                future.cancel();
-            }
-
-        });
-
-        Thread.sleep(1000);
-
-        // 关闭
-        System.out.println(timer.stop().size());
-        System.out.println("Finished！");
-
-        Thread.sleep(277777777);
-    }
 
     @Test
     public void testCronExpression() throws Exception {
@@ -91,5 +49,12 @@ public class UtilsTest {
         String appName = "powerjob-server ";
         System.out.println(StringUtils.containsWhitespace(goodAppName));
         System.out.println(StringUtils.containsWhitespace(appName));
+    }
+
+    @Test
+    public void filterTest() {
+        List<String> test = Lists.newArrayList("A", "B", null, "C", null);
+        List<String> list = test.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        System.out.println(list);
     }
 }

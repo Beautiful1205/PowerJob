@@ -58,7 +58,13 @@ public class CommonTaskTracker extends TaskTracker {
 
         // 启动定时任务（任务派发 & 状态检查）
         scheduledPool.scheduleWithFixedDelay(new Dispatcher(), 0, 5, TimeUnit.SECONDS);
-        scheduledPool.scheduleWithFixedDelay(new StatusCheckRunnable(), 10, 10, TimeUnit.SECONDS);
+        scheduledPool.scheduleWithFixedDelay(new StatusCheckRunnable(), 13, 13, TimeUnit.SECONDS);
+
+        // 如果是 MR 任务，则需要启动执行器动态检测装置
+        ExecuteType executeType = ExecuteType.valueOf(req.getExecuteType());
+        if (executeType == ExecuteType.MAP || executeType == ExecuteType.MAP_REDUCE) {
+            scheduledPool.scheduleAtFixedRate(new WorkerDetector(), 1, 1, TimeUnit.MINUTES);
+        }
     }
 
     @Override
@@ -110,7 +116,7 @@ public class CommonTaskTracker extends TaskTracker {
             log.info("[TaskTracker-{}] create root task successfully.", instanceId);
         }else {
             log.error("[TaskTracker-{}] create root task failed.", instanceId);
-            throw new OmsException("create root task failed for instance: " + instanceId);
+            throw new PowerJobException("create root task failed for instance: " + instanceId);
         }
     }
 
@@ -230,8 +236,8 @@ public class CommonTaskTracker extends TaskTracker {
                 try {
                     AskResponse askResponse = (AskResponse) askCS.toCompletableFuture().get(RemoteConstant.DEFAULT_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                     serverAccepted = askResponse.isSuccess();
-                }catch (Exception ignore) {
-                    log.warn("[TaskTracker-{}] report finished status failed, result={}.", instanceId, result);
+                }catch (Exception e) {
+                    log.warn("[TaskTracker-{}] report finished status failed, result={}.", instanceId, result, e);
                 }
 
                 // 服务器未接受上报，则等待下次重新上报
@@ -284,7 +290,10 @@ public class CommonTaskTracker extends TaskTracker {
             List<String> disconnectedPTs = ptStatusHolder.getAllDisconnectedProcessorTrackers();
             if (!disconnectedPTs.isEmpty()) {
                 log.warn("[TaskTracker-{}] some ProcessorTracker disconnected from TaskTracker,their address is {}.", instanceId, disconnectedPTs);
-                taskPersistenceService.updateLostTasks(disconnectedPTs);
+                if (taskPersistenceService.updateLostTasks(instanceId, disconnectedPTs, true)) {
+                    ptStatusHolder.remove(disconnectedPTs);
+                    log.warn("[TaskTracker-{}] removed these ProcessorTracker from StatusHolder: {}", instanceId, disconnectedPTs);
+                }
             }
         }
 

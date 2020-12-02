@@ -5,7 +5,7 @@ import akka.actor.ActorSystem;
 import akka.actor.DeadLetter;
 import akka.actor.Props;
 import akka.routing.RoundRobinPool;
-import com.github.kfcfans.powerjob.common.OmsException;
+import com.github.kfcfans.powerjob.common.PowerJobException;
 import com.github.kfcfans.powerjob.common.RemoteConstant;
 import com.github.kfcfans.powerjob.common.response.ResultDTO;
 import com.github.kfcfans.powerjob.common.utils.CommonUtils;
@@ -20,7 +20,7 @@ import com.github.kfcfans.powerjob.worker.background.OmsLogHandler;
 import com.github.kfcfans.powerjob.worker.background.ServerDiscoveryService;
 import com.github.kfcfans.powerjob.worker.background.WorkerHealthReporter;
 import com.github.kfcfans.powerjob.worker.common.OhMyConfig;
-import com.github.kfcfans.powerjob.worker.common.OmsBannerPrinter;
+import com.github.kfcfans.powerjob.worker.common.PowerBannerPrinter;
 import com.github.kfcfans.powerjob.worker.common.utils.SpringUtils;
 import com.github.kfcfans.powerjob.worker.persistence.TaskPersistenceService;
 import com.google.common.base.Stopwatch;
@@ -80,7 +80,7 @@ public class OhMyWorker implements ApplicationContextAware, InitializingBean, Di
         Stopwatch stopwatch = Stopwatch.createStarted();
         log.info("[OhMyWorker] start to initialize OhMyWorker...");
         try {
-            OmsBannerPrinter.print();
+            PowerBannerPrinter.print();
             // 校验 appName
             if (!config.isEnableTestMode()) {
                 appId = assertAppName();
@@ -163,16 +163,16 @@ public class OhMyWorker implements ApplicationContextAware, InitializingBean, Di
                     return appId;
                 }else {
                     log.error("[OhMyWorker] assert appName failed, this appName is invalid, please register the appName {} first.", appName);
-                    throw new OmsException(resultDTO.getMessage());
+                    throw new PowerJobException(resultDTO.getMessage());
                 }
-            }catch (OmsException oe) {
+            }catch (PowerJobException oe) {
                 throw oe;
             }catch (Exception ignore) {
                 log.warn("[OhMyWorker] assert appName by url({}) failed, please check the server address.", realUrl);
             }
         }
         log.error("[OhMyWorker] no available server in {}.", config.getServerAddress());
-        throw new OmsException("no server available!");
+        throw new PowerJobException("no server available!");
     }
 
     @Override

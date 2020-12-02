@@ -1,5 +1,6 @@
 package com.github.kfcfans.powerjob.server.common.config;
 
+import com.github.kfcfans.powerjob.server.common.RejectedExecutionHandlerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,29 +28,25 @@ public class ThreadPoolConfig {
     @Bean("omsTimingPool")
     public Executor getTimingPool() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(Runtime.getRuntime().availableProcessors());
-        executor.setMaxPoolSize(Runtime.getRuntime().availableProcessors() * 2);
+        executor.setCorePoolSize(Runtime.getRuntime().availableProcessors() * 16);
+        executor.setMaxPoolSize(Runtime.getRuntime().availableProcessors() * 32);
         // use SynchronousQueue
         executor.setQueueCapacity(0);
         executor.setKeepAliveSeconds(60);
         executor.setThreadNamePrefix("omsTimingPool-");
-        executor.setRejectedExecutionHandler((r, e) -> {
-            log.warn("[OmsTimingService] timing pool can't schedule job immediately, maybe some job using too much cpu times.");
-            // 定时任务优先级较高，不惜一些代价都需要继续执行，开线程继续干～
-            new Thread(r).start();
-        });
+        executor.setRejectedExecutionHandler(RejectedExecutionHandlerFactory.newThreadRun("PowerJobTimingPool"));
         return executor;
     }
 
     @Bean("omsBackgroundPool")
     public Executor initBackgroundPool() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(Runtime.getRuntime().availableProcessors());
-        executor.setMaxPoolSize(Runtime.getRuntime().availableProcessors() * 2);
+        executor.setCorePoolSize(Runtime.getRuntime().availableProcessors() * 8);
+        executor.setMaxPoolSize(Runtime.getRuntime().availableProcessors() * 16);
         executor.setQueueCapacity(8192);
         executor.setKeepAliveSeconds(60);
         executor.setThreadNamePrefix("omsBackgroundPool-");
-        executor.setRejectedExecutionHandler(new LogOnRejected());
+        executor.setRejectedExecutionHandler(RejectedExecutionHandlerFactory.newReject("PowerJobBackgroundPool"));
         return executor;
     }
 
@@ -63,11 +60,4 @@ public class ThreadPoolConfig {
         return scheduler;
     }
 
-    private static final class LogOnRejected implements RejectedExecutionHandler {
-
-        @Override
-        public void rejectedExecution(Runnable r, ThreadPoolExecutor p) {
-            log.error("[OmsThreadPool] Task({}) rejected from pool({}).", r, p);
-        }
-    }
 }

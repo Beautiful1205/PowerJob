@@ -36,6 +36,11 @@ public class WorkflowInstanceInfoDO {
     // workflow 状态（WorkflowInstanceStatus）
     private Integer status;
 
+    // 工作流启动参数
+    @Lob
+    @Column
+    private String wfInitParams;
+
     @Lob
     @Column
     private String dag;
@@ -43,6 +48,8 @@ public class WorkflowInstanceInfoDO {
     @Column
     private String result;
 
+    // 预计触发时间
+    private Long expectedTriggerTime;
     // 实际触发时间
     private Long actualTriggerTime;
     // 结束时间

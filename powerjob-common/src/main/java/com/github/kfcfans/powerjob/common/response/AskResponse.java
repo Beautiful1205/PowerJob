@@ -4,6 +4,8 @@ import com.github.kfcfans.powerjob.common.OmsSerializable;
 import com.github.kfcfans.powerjob.common.utils.JsonUtils;
 import lombok.*;
 
+import java.nio.charset.StandardCharsets;
+
 
 /**
  * Pattens.ask 的响应
@@ -31,7 +33,11 @@ public class AskResponse implements OmsSerializable {
         AskResponse r = new AskResponse();
         r.success = true;
         if (data != null) {
-            r.data = JsonUtils.toBytes(data);
+            if (data instanceof String) {
+                r.data = ((String) data).getBytes(StandardCharsets.UTF_8);
+            } else {
+                r.data = JsonUtils.toBytes(data);
+            }
         }
         return r;
     }
@@ -45,6 +51,10 @@ public class AskResponse implements OmsSerializable {
 
     public <T> T getData(Class<T> clz) throws Exception {
         return JsonUtils.parseObject(data, clz);
+    }
+
+    public String parseDataAsString() {
+        return new String(data, StandardCharsets.UTF_8);
     }
 
 }

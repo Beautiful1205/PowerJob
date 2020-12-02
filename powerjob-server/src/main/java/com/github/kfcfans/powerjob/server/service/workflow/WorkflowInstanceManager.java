@@ -67,9 +67,11 @@ public class WorkflowInstanceManager {
     /**
      * 创建工作流任务实例
      * @param wfInfo 工作流任务元数据（描述信息）
+     * @param initParams 启动参数
+     * @param expectTriggerTime 预计执行时间
      * @return wfInstanceId
      */
-    public Long create(WorkflowInfoDO wfInfo) {
+    public Long create(WorkflowInfoDO wfInfo, String initParams, Long expectTriggerTime) {
 
         Long wfId = wfInfo.getId();
         Long wfInstanceId = idGenerateService.allocate();
@@ -81,7 +83,9 @@ public class WorkflowInstanceManager {
         newWfInstance.setWfInstanceId(wfInstanceId);
         newWfInstance.setWorkflowId(wfId);
         newWfInstance.setStatus(WorkflowInstanceStatus.WAITING.getV());
+        newWfInstance.setExpectedTriggerTime(expectTriggerTime);
         newWfInstance.setActualTriggerTime(System.currentTimeMillis());
+        newWfInstance.setWfInitParams(initParams);
 
         newWfInstance.setGmtCreate(now);
         newWfInstance.setGmtModified(now);
@@ -107,8 +111,9 @@ public class WorkflowInstanceManager {
      * 开始任务
      * @param wfInfo 工作流任务信息
      * @param wfInstanceId 工作流任务实例ID
+     * @param initParams 启动参数
      */
-    public void start(WorkflowInfoDO wfInfo, Long wfInstanceId) {
+    public void start(WorkflowInfoDO wfInfo, Long wfInstanceId, String initParams) {
 
         Optional<WorkflowInstanceInfoDO> wfInstanceInfoOpt = workflowInstanceInfoRepository.findByWfInstanceId(wfInstanceId);
         if (!wfInstanceInfoOpt.isPresent()) {
@@ -126,11 +131,17 @@ public class WorkflowInstanceManager {
         // 并发度控制
         int instanceConcurrency = workflowInstanceInfoRepository.countByWorkflowIdAndStatusIn(wfInfo.getId(), WorkflowInstanceStatus.generalizedRunningStatus);
         if (instanceConcurrency > wfInfo.getMaxWfInstanceNum()) {
-            onWorkflowInstanceFailed(String.format(SystemInstanceResult.TOO_MUCH_INSTANCE, instanceConcurrency, wfInfo.getMaxWfInstanceNum()), wfInstanceInfo);
+            onWorkflowInstanceFailed(String.format(SystemInstanceResult.TOO_MANY_INSTANCES, instanceConcurrency, wfInfo.getMaxWfInstanceNum()), wfInstanceInfo);
             return;
         }
 
         try {
+
+            // 构建根任务启动参数（为了精简 worker 端实现，启动参数仍以 instanceParams 字段承接）
+            Map<String, String> preJobId2Result = Maps.newHashMap();
+            // 模拟 preJobId -> preJobResult 的格式，-1 代表前置任务不存在
+            preJobId2Result.put("-1", initParams);
+            String wfRootInstanceParams = JSONObject.toJSONString(preJobId2Result);
 
             PEWorkflowDAG peWorkflowDAG = JSONObject.parseObject(wfInfo.getPeDAG(), PEWorkflowDAG.class);
             List<PEWorkflowDAG.Node> roots = WorkflowDAGUtils.listRoots(peWorkflowDAG);
@@ -138,7 +149,7 @@ public class WorkflowInstanceManager {
             peWorkflowDAG.getNodes().forEach(node -> node.setStatus(InstanceStatus.WAITING_DISPATCH.getV()));
             // 创建所有的根任务
             roots.forEach(root -> {
-                Long instanceId = instanceService.create(root.getJobId(), wfInfo.getAppId(), null, wfInstanceId, System.currentTimeMillis());
+                Long instanceId = instanceService.create(root.getJobId(), wfInfo.getAppId(), wfRootInstanceParams, wfInstanceId, System.currentTimeMillis());
                 root.setInstanceId(instanceId);
                 root.setStatus(InstanceStatus.RUNNING.getV());
 
@@ -152,7 +163,7 @@ public class WorkflowInstanceManager {
             log.info("[Workflow-{}|{}] start workflow successfully", wfInfo.getId(), wfInstanceId);
 
             // 真正开始执行根任务
-            roots.forEach(root -> runInstance(root.getJobId(), root.getInstanceId(), wfInstanceId, null));
+            roots.forEach(root -> runInstance(root.getJobId(), root.getInstanceId(), wfInstanceId, wfRootInstanceParams));
         }catch (Exception e) {
 
             log.error("[Workflow-{}|{}] submit workflow: {} failed.", wfInfo.getId(), wfInstanceId, wfInfo, e);

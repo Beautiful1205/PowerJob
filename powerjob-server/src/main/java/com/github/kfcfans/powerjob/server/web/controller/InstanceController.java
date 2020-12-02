@@ -1,6 +1,7 @@
 package com.github.kfcfans.powerjob.server.web.controller;
 
 import com.github.kfcfans.powerjob.common.InstanceStatus;
+import com.github.kfcfans.powerjob.common.PowerJobException;
 import com.github.kfcfans.powerjob.common.response.ResultDTO;
 import com.github.kfcfans.powerjob.server.akka.OhMyServer;
 import com.github.kfcfans.powerjob.server.common.utils.OmsFileUtils;
@@ -16,6 +17,7 @@ import com.github.kfcfans.powerjob.server.service.instance.InstanceService;
 import com.github.kfcfans.powerjob.server.web.request.QueryInstanceRequest;
 import com.github.kfcfans.powerjob.server.web.response.InstanceDetailVO;
 import com.github.kfcfans.powerjob.server.web.response.InstanceInfoVO;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Example;
@@ -39,6 +41,7 @@ import java.util.stream.Collectors;
  * @author tjq
  * @since 2020/4/9
  */
+@Slf4j
 @RestController
 @RequestMapping("/instance")
 public class InstanceController {
@@ -88,6 +91,7 @@ public class InstanceController {
                 response.sendRedirect(url);
                 return ResultDTO.success(StringPage.simple("redirecting..."));
             }catch (Exception e) {
+                log.warn("[Instance-{}] redirect request to url[{}] failed, please ensure all server has the same http port!", instanceId, url, e);
                 return ResultDTO.failed(e);
             }
         }
@@ -145,10 +149,10 @@ public class InstanceController {
     private String getTargetServer(Long instanceId) {
         InstanceInfoDO instanceInfo = instanceInfoRepository.findByInstanceId(instanceId);
         if (instanceInfo == null) {
-            throw new RuntimeException("invalid instanceId: " + instanceId);
+            throw new PowerJobException("invalid instanceId: " + instanceId);
         }
 
         Optional<AppInfoDO> appInfoOpt = appInfoRepository.findById(instanceInfo.getAppId());
-        return appInfoOpt.orElseThrow(() -> new RuntimeException("impossible")).getCurrentServer();
+        return appInfoOpt.orElseThrow(() -> new PowerJobException("impossible")).getCurrentServer();
     }
 }
